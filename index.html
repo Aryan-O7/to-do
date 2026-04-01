@@ -44,10 +44,21 @@
         />
       </div>
       <div class="topbar-actions">
-        <button class="ui icon button light-icon-btn" aria-label="Notifications">
+        <button
+          id="open-notifications-btn"
+          class="ui icon button light-icon-btn"
+          type="button"
+          aria-label="Notifications"
+        >
           <i class="bell outline icon"></i>
+          <span id="notifications-badge" class="notification-badge">0</span>
         </button>
-        <button class="ui icon button light-icon-btn" aria-label="Calendar">
+        <button
+          id="open-calendar-btn"
+          class="ui icon button light-icon-btn"
+          type="button"
+          aria-label="Calendar"
+        >
           <i class="calendar alternate outline icon"></i>
         </button>
         <div class="today-box">
@@ -113,7 +124,7 @@
                 Keep shipping your tasks. Focus on priority items and complete your sprint.
               </p>
             </div>
-            <button class="ui button invite-btn">Invite</button>
+            <button id="open-invite-modal" class="ui button invite-btn">Invite</button>
           </section>
 
           <section class="dashboard-grid">
@@ -121,7 +132,13 @@
               <article class="panel panel-main">
                 <div class="panel-header">
                   <h3>To-Do</h3>
-                  <span id="task-count">0 tasks</span>
+                  <div class="panel-header-actions">
+                    <button id="open-add-task-modal" class="add-task-icon-btn" type="button">
+                      <i class="plus icon"></i>
+                      Add task
+                    </button>
+                    <span id="task-count">0 tasks</span>
+                  </div>
                 </div>
 
                 <form id="add-task" class="add-task-form">
@@ -405,6 +422,169 @@
           Edit Task
           <i class="edit icon"></i>
         </button>
+      </div>
+    </div>
+
+    <div id="add-task-modal" class="ui large modal task-compose-modal">
+      <div class="header modal-head-row">
+        <span>Add New Task</span>
+        <button class="go-back-btn" type="button" onclick="$('#add-task-modal.modal').modal('hide')">
+          Go Back
+        </button>
+      </div>
+      <div class="content">
+        <div class="ui form add-task-modal-form">
+          <div class="field">
+            <label for="modal-task-title">Title</label>
+            <input id="modal-task-title" type="text" placeholder="Task title" />
+          </div>
+          <div class="field">
+            <label for="modal-task-date">Date</label>
+            <input id="modal-task-date" type="date" />
+          </div>
+          <div class="field">
+            <label>Priority</label>
+            <div class="modal-priority-row">
+              <label><input type="radio" name="modal-priority" value="high" /> Extreme</label>
+              <label><input type="radio" name="modal-priority" value="moderate" checked /> Moderate</label>
+              <label><input type="radio" name="modal-priority" value="low" /> Low</label>
+            </div>
+          </div>
+          <div class="two fields modal-two-col">
+            <div class="field">
+              <label for="modal-task-description">Task Description</label>
+              <textarea id="modal-task-description" rows="8" placeholder="Start writing here..."></textarea>
+            </div>
+            <div class="field">
+              <label>Upload Image</label>
+              <div class="upload-drop-zone" id="upload-drop-zone">
+                <input id="modal-task-image" type="file" accept="image/*" />
+                <p id="upload-file-name">Drag & drop files here or browse</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="actions">
+        <button id="add-task-modal-submit" class="ui button coral-btn" type="button">Done</button>
+      </div>
+    </div>
+
+    <div id="invite-modal" class="ui large modal invite-members-modal">
+      <div class="header modal-head-row">
+        <span>Send an invite to a new member</span>
+        <button class="go-back-btn" type="button" onclick="$('#invite-modal.modal').modal('hide')">
+          Go Back
+        </button>
+      </div>
+      <div class="content">
+        <div class="ui form">
+          <div class="fields">
+            <div class="twelve wide field">
+              <label for="invite-email">Email</label>
+              <input id="invite-email" type="email" placeholder="name@email.com" />
+            </div>
+            <div class="four wide field invite-send-field">
+              <label>&nbsp;</label>
+              <button id="send-invite-btn" class="ui button coral-btn" type="button">Send Invite</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Members</label>
+            <ul id="invite-members-list" class="invite-members-list"></ul>
+          </div>
+          <div class="fields">
+            <div class="twelve wide field">
+              <label for="project-link">Project Link</label>
+              <input id="project-link" type="text" readonly />
+            </div>
+            <div class="four wide field invite-send-field">
+              <label>&nbsp;</label>
+              <button id="copy-project-link-btn" class="ui button coral-btn" type="button">Copy Link</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="calendar-modal" class="ui large modal calendar-modal header-popover">
+      <div class="header modal-head-row">
+        <span>Calendar</span>
+        <button class="go-back-btn" type="button" onclick="$('#calendar-modal.modal').modal('hide')">
+          Go Back
+        </button>
+      </div>
+      <div class="content">
+        <div class="calendar-shell">
+          <section class="calendar-main-card">
+            <div class="calendar-toolbar">
+              <div>
+                <p class="calendar-kicker">Task schedule</p>
+                <h4 id="calendar-month-label">June 2023</h4>
+              </div>
+              <div class="calendar-nav-actions">
+                <button id="calendar-prev-btn" class="calendar-nav-btn" type="button" aria-label="Previous month">
+                  <i class="chevron left icon"></i>
+                </button>
+                <button id="calendar-next-btn" class="calendar-nav-btn" type="button" aria-label="Next month">
+                  <i class="chevron right icon"></i>
+                </button>
+              </div>
+            </div>
+            <div class="calendar-weekdays" aria-hidden="true">
+              <span>Sun</span>
+              <span>Mon</span>
+              <span>Tue</span>
+              <span>Wed</span>
+              <span>Thu</span>
+              <span>Fri</span>
+              <span>Sat</span>
+            </div>
+            <div id="calendar-grid" class="calendar-grid" aria-label="Monthly calendar"></div>
+          </section>
+          <aside class="calendar-side-card">
+            <div class="calendar-side-header">
+              <p class="calendar-kicker">Selected date</p>
+              <h4 id="calendar-selected-label">-</h4>
+              <p id="calendar-selected-subtitle">Choose a day to see the schedule</p>
+            </div>
+            <div class="calendar-side-stat">
+              <span>Tasks on this day</span>
+              <strong id="calendar-day-task-count">0</strong>
+            </div>
+            <div class="calendar-side-events">
+              <p>Upcoming tasks</p>
+              <ul id="calendar-upcoming-list"></ul>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </div>
+
+    <div id="notifications-modal" class="ui large modal notifications-modal header-popover">
+      <div class="header modal-head-row">
+        <span>Notifications</span>
+        <button
+          class="go-back-btn"
+          type="button"
+          onclick="$('#notifications-modal.modal').modal('hide')"
+        >
+          Go Back
+        </button>
+      </div>
+      <div class="content">
+        <div class="notifications-shell">
+          <div class="notifications-summary-card">
+            <div>
+              <p class="calendar-kicker">Workspace feed</p>
+              <h4 id="notifications-title">Recent activity</h4>
+            </div>
+            <button id="mark-all-read-btn" class="notifications-mark-btn" type="button">
+              Mark all read
+            </button>
+          </div>
+          <ul id="notifications-list" class="notifications-list"></ul>
+        </div>
       </div>
     </div>
 

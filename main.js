@@ -23,6 +23,34 @@ const clearAllTasksBtn = document.querySelector('button#clear-all-tasks')
 const clearCompletedBtn = document.querySelector('button#clear-completed-btn')
 const taskCount = document.querySelector('#task-count')
 const searchInput = document.querySelector('#search-input')
+const openAddTaskModalBtn = document.querySelector('#open-add-task-modal')
+const addTaskModalSubmitBtn = document.querySelector('#add-task-modal-submit')
+const modalTaskTitle = document.querySelector('#modal-task-title')
+const modalTaskDate = document.querySelector('#modal-task-date')
+const modalTaskDescription = document.querySelector('#modal-task-description')
+const modalTaskImage = document.querySelector('#modal-task-image')
+const uploadFileName = document.querySelector('#upload-file-name')
+
+const openInviteModalBtn = document.querySelector('#open-invite-modal')
+const sendInviteBtn = document.querySelector('#send-invite-btn')
+const inviteEmailInput = document.querySelector('#invite-email')
+const inviteMembersList = document.querySelector('#invite-members-list')
+const projectLinkInput = document.querySelector('#project-link')
+const copyProjectLinkBtn = document.querySelector('#copy-project-link-btn')
+const openNotificationsBtn = document.querySelector('#open-notifications-btn')
+const openCalendarBtn = document.querySelector('#open-calendar-btn')
+const notificationsBadge = document.querySelector('#notifications-badge')
+const notificationsList = document.querySelector('#notifications-list')
+const notificationsTitle = document.querySelector('#notifications-title')
+const markAllReadBtn = document.querySelector('#mark-all-read-btn')
+const calendarMonthLabel = document.querySelector('#calendar-month-label')
+const calendarGrid = document.querySelector('#calendar-grid')
+const calendarSelectedLabel = document.querySelector('#calendar-selected-label')
+const calendarSelectedSubtitle = document.querySelector('#calendar-selected-subtitle')
+const calendarDayTaskCount = document.querySelector('#calendar-day-task-count')
+const calendarUpcomingList = document.querySelector('#calendar-upcoming-list')
+const calendarPrevBtn = document.querySelector('#calendar-prev-btn')
+const calendarNextBtn = document.querySelector('#calendar-next-btn')
 
 const ringCompleted = document.querySelector('#ring-completed')
 const ringProgress = document.querySelector('#ring-progress')
@@ -91,6 +119,20 @@ let users = []
 let currentUser = null
 let authMode = 'signup'
 let draggedTaskId = null
+let inviteMembers = []
+let notifications = []
+let calendarState = {
+  year: new Date().getFullYear(),
+  month: new Date().getMonth(),
+  selectedDate: new Date(),
+}
+let activeHeaderPopover = null
+let activeHeaderAnchor = null
+
+const INVITE_PERMISSIONS = {
+  view: 'Can view',
+  edit: 'Can edit',
+}
 
 function escapeHtml(str) {
   return String(str)
@@ -105,8 +147,370 @@ function getTaskStorageKey() {
   return currentUser ? `tasks_${currentUser.id}` : 'tasks_guest'
 }
 
+function getInviteStorageKey() {
+  return currentUser ? `invites_${currentUser.id}` : 'invites_guest'
+}
+
 function defaultAvatar() {
   return 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?auto=format&fit=crop&w=180&q=80'
+}
+
+function getNotificationStorageKey() {
+  return currentUser ? `notifications_${currentUser.id}` : 'notifications_guest'
+}
+
+function normalizeNotification(item) {
+  return {
+    id: item.id || `n-${Date.now()}-${Math.floor(Math.random() * 100000)}`,
+    title: (item.title || 'Workspace update').toString().trim(),
+    message: (item.message || '').toString().trim(),
+    type: item.type === 'error' ? 'error' : 'info',
+    read: !!item.read,
+    createdAt: item.createdAt || new Date().toISOString(),
+    avatar: (item.avatar || '').toString().trim(),
+  }
+}
+
+function saveNotifications() {
+  if (!currentUser) return
+  localStorage.setItem(getNotificationStorageKey(), JSON.stringify(notifications))
+}
+
+function updateNotificationsBadge() {
+  if (!notificationsBadge) return
+  const unread = notifications.filter(item => !item.read).length
+  notificationsBadge.textContent = String(unread)
+  notificationsBadge.classList.toggle('visible', unread > 0)
+}
+
+function seedNotificationsFromTasks() {
+  if (!currentUser || notifications.length > 0) return
+
+  const seeded = list
+    .filter(task => task.dueDate || task.priority === 'high')
+    .slice(0, 4)
+    .map(task =>
+      normalizeNotification({
+        title: task.completed ? 'Completed task' : 'Task needs attention',
+        message: `${task.text}${task.dueDate ? ` · due ${prettyDate(task.dueDate)}` : ''}`,
+        type: task.completed ? 'info' : 'error',
+        read: false,
+        createdAt: task.createdAt || new Date().toISOString(),
+      })
+    )
+
+  if (seeded.length === 0) {
+    seeded.push(
+      normalizeNotification({
+        title: 'Workspace ready',
+        message: 'Your dashboard is connected and ready for updates.',
+        type: 'info',
+        read: false,
+      })
+    )
+  }
+
+  notifications = seeded.slice(0, 10)
+  saveNotifications()
+}
+
+function loadNotifications() {
+  if (!currentUser) {
+    notifications = []
+    updateNotificationsBadge()
+    return
+  }
+
+  const raw = JSON.parse(localStorage.getItem(getNotificationStorageKey())) || []
+  notifications = Array.isArray(raw) ? raw.map(normalizeNotification) : []
+  notifications.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+  seedNotificationsFromTasks()
+  updateNotificationsBadge()
+}
+
+function pushNotificationFeed(title, message, options = {}) {
+  if (!currentUser) return
+
+  notifications.unshift(
+    normalizeNotification({
+      title,
+      message,
+      type: options.type || 'info',
+      read: false,
+      avatar: options.avatar || '',
+      createdAt: options.createdAt || new Date().toISOString(),
+    })
+  )
+
+  notifications = notifications.slice(0, 30)
+  saveNotifications()
+  updateNotificationsBadge()
+}
+
+function markAllNotificationsRead() {
+  notifications = notifications.map(item => ({ ...item, read: true }))
+  saveNotifications()
+  updateNotificationsBadge()
+  renderNotificationsPanel()
+}
+
+function formatRelativeTime(value) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return 'just now'
+
+  const diffMs = Date.now() - date.getTime()
+  const diffMinutes = Math.max(1, Math.floor(diffMs / 60000))
+  if (diffMinutes < 60) return `${diffMinutes}m ago`
+
+  const diffHours = Math.floor(diffMinutes / 60)
+  if (diffHours < 24) return `${diffHours}h ago`
+
+  const diffDays = Math.floor(diffHours / 24)
+  return `${diffDays}d ago`
+}
+
+function getTaskDateKey(task) {
+  if (!task.dueDate) return ''
+  const date = new Date(task.dueDate)
+  if (Number.isNaN(date.getTime())) return ''
+  return date.toISOString().slice(0, 10)
+}
+
+function getTasksForCalendarDate(date) {
+  const key = date.toISOString().slice(0, 10)
+  return list.filter(task => getTaskDateKey(task) === key)
+}
+
+function renderNotificationsPanel() {
+  if (!notificationsList) return
+
+  const total = notifications.length
+  const unread = notifications.filter(item => !item.read).length
+  if (notificationsTitle) {
+    notificationsTitle.textContent = total === 0 ? 'No activity yet' : `${unread} unread updates`
+  }
+
+  notificationsList.innerHTML = ''
+
+  if (total === 0) {
+    notificationsList.innerHTML = `
+      <li class="notifications-empty">
+        <strong>No notifications yet</strong>
+        <span>Activity from invites, tasks, and profile changes will appear here.</span>
+      </li>
+    `
+    return
+  }
+
+  notifications.forEach(item => {
+    const avatar = item.avatar
+      ? `<img class="notification-avatar" src="${escapeHtml(item.avatar)}" alt="notification avatar" />`
+      : `<div class="notification-avatar fallback">${escapeHtml(getInitials(currentUser?.name || 'NA'))}</div>`
+
+    notificationsList.insertAdjacentHTML(
+      'beforeend',
+      `<li class="notification-item ${item.read ? 'read' : 'unread'}">
+        ${avatar}
+        <div class="notification-copy">
+          <div class="notification-topline">
+            <strong>${escapeHtml(item.title)}</strong>
+            <span>${formatRelativeTime(item.createdAt)}</span>
+          </div>
+          <p>${escapeHtml(item.message)}</p>
+        </div>
+      </li>`
+    )
+  })
+}
+
+function renderCalendarPanel() {
+  if (!calendarGrid) return
+
+  const { year, month, selectedDate } = calendarState
+  const monthName = new Date(year, month, 1).toLocaleDateString(undefined, {
+    month: 'long',
+    year: 'numeric',
+  })
+
+  if (calendarMonthLabel) calendarMonthLabel.textContent = monthName
+
+  const firstDay = new Date(year, month, 1)
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const startOffset = firstDay.getDay()
+  const selectedKey = selectedDate.toISOString().slice(0, 10)
+
+  calendarGrid.innerHTML = ''
+
+  for (let index = 0; index < startOffset; index += 1) {
+    calendarGrid.insertAdjacentHTML('beforeend', '<button type="button" class="calendar-day empty" tabindex="-1"></button>')
+  }
+
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    const currentDate = new Date(year, month, day)
+    const currentKey = currentDate.toISOString().slice(0, 10)
+    const tasksForDay = getTasksForCalendarDate(currentDate)
+    const isToday = currentDate.toDateString() === new Date().toDateString()
+    const isSelected = currentKey === selectedKey
+
+    calendarGrid.insertAdjacentHTML(
+      'beforeend',
+      `<button
+        type="button"
+        class="calendar-day ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''} ${tasksForDay.length > 0 ? 'has-task' : ''}"
+        data-date="${currentKey}"
+      >
+        <span class="calendar-day-number">${day}</span>
+        ${tasksForDay.length > 0 ? `<span class="calendar-day-count">${tasksForDay.length}</span>` : ''}
+      </button>`
+    )
+  }
+
+  if (calendarSelectedLabel) {
+    calendarSelectedLabel.textContent = selectedDate.toLocaleDateString(undefined, {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+    })
+  }
+
+  const selectedTasks = getTasksForCalendarDate(selectedDate)
+  if (calendarSelectedSubtitle) {
+    calendarSelectedSubtitle.textContent = selectedTasks.length
+      ? `${selectedTasks.length} task${selectedTasks.length > 1 ? 's' : ''} due on this day`
+      : 'No tasks scheduled for this day'
+  }
+  if (calendarDayTaskCount) {
+    calendarDayTaskCount.textContent = String(selectedTasks.length)
+  }
+
+  if (calendarUpcomingList) {
+    calendarUpcomingList.innerHTML = ''
+    if (selectedTasks.length === 0) {
+      calendarUpcomingList.innerHTML = '<li class="calendar-empty">Nothing planned for the selected day.</li>'
+    } else {
+      selectedTasks.slice(0, 5).forEach(task => {
+        calendarUpcomingList.insertAdjacentHTML(
+          'beforeend',
+          `<li>
+            <strong>${escapeHtml(task.text)}</strong>
+            <span>${escapeHtml(task.priority)}</span>
+          </li>`
+        )
+      })
+    }
+  }
+
+  calendarGrid.querySelectorAll('.calendar-day[data-date]').forEach(button => {
+    button.addEventListener('click', () => {
+      const dateValue = button.dataset.date
+      if (!dateValue) return
+      calendarState.selectedDate = new Date(`${dateValue}T12:00:00`)
+      calendarState.year = calendarState.selectedDate.getFullYear()
+      calendarState.month = calendarState.selectedDate.getMonth()
+      renderCalendarPanel()
+    })
+  })
+}
+
+function closeHeaderPopover() {
+  if (!activeHeaderPopover) return
+
+  activeHeaderPopover.classList.remove('open')
+  activeHeaderPopover.style.display = 'none'
+  activeHeaderPopover.style.left = ''
+  activeHeaderPopover.style.top = ''
+  activeHeaderPopover.style.width = ''
+  activeHeaderPopover.style.visibility = ''
+  activeHeaderPopover = null
+  activeHeaderAnchor = null
+  document.body.classList.remove('header-popover-open')
+}
+
+function positionHeaderPopover(panel, anchor, preferredWidth) {
+  const margin = 12
+  const anchorRect = anchor.getBoundingClientRect()
+  const viewportWidth = window.innerWidth
+  const viewportHeight = window.innerHeight
+  const maxWidth = Math.max(280, viewportWidth - margin * 2)
+  const width = Math.min(preferredWidth, maxWidth)
+
+  panel.style.width = `${width}px`
+  panel.style.display = 'block'
+
+  const panelRect = panel.getBoundingClientRect()
+  let left = anchorRect.right - panelRect.width
+  left = Math.max(margin, Math.min(left, viewportWidth - panelRect.width - margin))
+
+  let top = anchorRect.bottom + 12
+  if (top + panelRect.height > viewportHeight - margin) {
+    top = Math.max(margin, anchorRect.top - panelRect.height - 12)
+  }
+
+  panel.style.left = `${left}px`
+  panel.style.top = `${top}px`
+  panel.style.visibility = 'visible'
+}
+
+function openHeaderPopover(panelId, anchor, preferredWidth) {
+  const panel = document.getElementById(panelId)
+  if (!panel) return
+
+  if (activeHeaderPopover === panel && panel.classList.contains('open')) {
+    closeHeaderPopover()
+    return
+  }
+
+  closeHeaderPopover()
+
+  panel.classList.add('open')
+  panel.style.display = 'block'
+  panel.style.visibility = 'hidden'
+  panel.style.position = 'fixed'
+  panel.style.zIndex = '80'
+
+  requestAnimationFrame(() => {
+    positionHeaderPopover(panel, anchor, preferredWidth)
+    activeHeaderPopover = panel
+    activeHeaderAnchor = anchor
+    document.body.classList.add('header-popover-open')
+  })
+}
+
+function openNotificationsPanel() {
+  if (!currentUser) {
+    showNotification('error', 'Please login first')
+    return
+  }
+
+  renderNotificationsPanel()
+  markAllNotificationsRead()
+  openHeaderPopover('notifications-modal', openNotificationsBtn, 390)
+}
+
+function openCalendarPanel() {
+  if (!currentUser) {
+    showNotification('error', 'Please login first')
+    return
+  }
+
+  const now = new Date()
+  calendarState = {
+    year: now.getFullYear(),
+    month: now.getMonth(),
+    selectedDate: now,
+  }
+  renderCalendarPanel()
+  openHeaderPopover('calendar-modal', openCalendarBtn, 420)
+}
+
+function stepCalendarMonth(direction) {
+  const nextDate = new Date(calendarState.year, calendarState.month + direction, 1)
+  calendarState.year = nextDate.getFullYear()
+  calendarState.month = nextDate.getMonth()
+  const maxDay = new Date(calendarState.year, calendarState.month + 1, 0).getDate()
+  const selectedDay = Math.min(calendarState.selectedDate.getDate(), maxDay)
+  calendarState.selectedDate = new Date(calendarState.year, calendarState.month, selectedDay)
+  renderCalendarPanel()
 }
 
 function loadUsers() {
@@ -129,7 +533,10 @@ function setCurrentUser(user) {
   }
   applyCurrentUserUI()
   loadList()
+  loadInviteMembers()
+  loadNotifications()
   renderTasks()
+  renderInviteMembers()
 }
 
 function restoreCurrentUser() {
@@ -166,7 +573,283 @@ function normalizeTask(task) {
     priority,
     category,
     dueDate,
+    description: (task.description || '').toString(),
+    image: (task.image || '').toString(),
     createdAt: task.createdAt || new Date().toISOString(),
+  }
+}
+
+function defaultInviteMembers() {
+  return [
+    {
+      id: `m-${Date.now()}-1`,
+      name: 'Upashna Gurung',
+      email: 'uppaeygrg332@gmail.com',
+      permission: 'edit',
+      isOwner: false,
+      avatar:
+        'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=96&q=80',
+    },
+    {
+      id: `m-${Date.now()}-2`,
+      name: 'Jeremy Lee',
+      email: 'jerrylee1996@gmail.com',
+      permission: 'edit',
+      isOwner: false,
+      avatar:
+        'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=96&q=80',
+    },
+    {
+      id: `m-${Date.now()}-3`,
+      name: 'Thomas Park',
+      email: 'parktho123@gmail.com',
+      permission: 'edit',
+      isOwner: true,
+      avatar:
+        'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=96&q=80',
+    },
+  ]
+}
+
+function normalizeInviteMember(member) {
+  const hasOwnerLabel = String(member.role || '').toLowerCase() === 'owner'
+  return {
+    id: member.id || `m-${Date.now()}-${Math.floor(Math.random() * 100000)}`,
+    name: (member.name || 'New Member').toString().trim(),
+    email: (member.email || '').toString().trim().toLowerCase(),
+    permission:
+      member.permission === 'view' || member.role === INVITE_PERMISSIONS.view ? 'view' : 'edit',
+    isOwner: !!member.isOwner || hasOwnerLabel,
+    avatar: (member.avatar || '').toString().trim(),
+  }
+}
+
+function validateEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+}
+
+function getInitials(name) {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return 'NA'
+  const first = parts[0].charAt(0)
+  const second = parts.length > 1 ? parts[1].charAt(0) : ''
+  return `${first}${second}`.toUpperCase()
+}
+
+function loadInviteMembers() {
+  if (!currentUser) {
+    inviteMembers = []
+    return
+  }
+
+  const raw = JSON.parse(localStorage.getItem(getInviteStorageKey()))
+  const base = Array.isArray(raw) && raw.length > 0 ? raw : defaultInviteMembers()
+  inviteMembers = base.map(normalizeInviteMember).filter(member => member.email)
+  if (!inviteMembers.some(member => member.isOwner)) {
+    inviteMembers.unshift(normalizeInviteMember({
+      name: currentUser?.name || 'Workspace Owner',
+      email: currentUser?.email || 'owner@example.com',
+      permission: 'edit',
+      isOwner: true,
+      avatar: currentUser?.avatar || '',
+    }))
+  }
+  saveInviteMembers()
+}
+
+function saveInviteMembers() {
+  if (!currentUser) return
+  localStorage.setItem(getInviteStorageKey(), JSON.stringify(inviteMembers))
+}
+
+function createAvatarFromEmail(email) {
+  const seed = encodeURIComponent(email.toLowerCase())
+  return `https://api.dicebear.com/8.x/initials/svg?seed=${seed}&backgroundColor=ffd5d5,fde68a,c7d2fe`
+}
+
+function renderInviteMembers() {
+  if (!inviteMembersList) return
+  inviteMembersList.innerHTML = ''
+
+  const orderedMembers = [...inviteMembers].sort((a, b) => {
+    if (a.isOwner && !b.isOwner) return -1
+    if (!a.isOwner && b.isOwner) return 1
+    return 0
+  })
+
+  orderedMembers.forEach(member => {
+    const avatarBlock = member.avatar
+      ? `<img class="invite-avatar" src="${escapeHtml(member.avatar)}" alt="${escapeHtml(member.name)} avatar" />`
+      : `<div class="invite-avatar-fallback">${escapeHtml(getInitials(member.name))}</div>`
+
+    const controls = member.isOwner
+      ? '<span class="invite-owner-pill">Owner</span>'
+      : `<select class="invite-role-select" data-member-id="${escapeHtml(member.id)}">
+          <option value="view" ${member.permission === 'view' ? 'selected' : ''}>Can view</option>
+          <option value="edit" ${member.permission === 'edit' ? 'selected' : ''}>Can edit</option>
+          <option value="remove">Remove member</option>
+        </select>`
+
+    inviteMembersList.insertAdjacentHTML(
+      'beforeend',
+      `<li>
+        ${avatarBlock}
+        <div class="invite-member-meta">
+          <strong>${escapeHtml(member.name)}</strong>
+          <small>${escapeHtml(member.email)}</small>
+        </div>
+        <div class="invite-member-controls">${controls}</div>
+      </li>`
+    )
+  })
+
+  inviteMembersList.querySelectorAll('.invite-role-select').forEach(select => {
+    select.addEventListener('change', event => {
+      const memberId = event.target.dataset.memberId
+      const action = event.target.value
+      const index = inviteMembers.findIndex(member => member.id === memberId)
+      if (index === -1) return
+
+      if (action === 'remove') {
+        inviteMembers.splice(index, 1)
+        saveInviteMembers()
+        renderInviteMembers()
+        showNotification('success', 'Member removed')
+        return
+      }
+
+      inviteMembers[index].permission = action
+      saveInviteMembers()
+      showNotification('success', `Permission updated to ${INVITE_PERMISSIONS[action]}`)
+    })
+  })
+}
+
+function resetAddTaskModalFields() {
+  modalTaskTitle.value = ''
+  modalTaskDate.value = ''
+  modalTaskDescription.value = ''
+  modalTaskImage.value = ''
+  if (uploadFileName) uploadFileName.textContent = 'Drag & drop files here or browse'
+  const selected = document.querySelector('input[name="modal-priority"][value="moderate"]')
+  if (selected) selected.checked = true
+}
+
+function openAddTaskModal() {
+  if (!currentUser) {
+    showNotification('error', 'Please login first')
+    return
+  }
+  resetAddTaskModalFields()
+  $('#add-task-modal.modal').modal('show')
+}
+
+function readImageFileAsDataURL(file) {
+  return new Promise(resolve => {
+    if (!file) {
+      resolve('')
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = event => resolve(String(event.target.result || ''))
+    reader.onerror = () => resolve('')
+    reader.readAsDataURL(file)
+  })
+}
+
+async function submitAddTaskFromModal() {
+  const text = modalTaskTitle.value.trim()
+  if (text.length === 0) {
+    showNotification('error', 'Task title is required')
+    return
+  }
+
+  const selectedPriority = document.querySelector('input[name="modal-priority"]:checked')
+  const priority = selectedPriority ? selectedPriority.value : 'moderate'
+  const imageFile = modalTaskImage.files && modalTaskImage.files[0]
+  const image = await readImageFileAsDataURL(imageFile)
+
+  list.push({
+    id: Date.now(),
+    text,
+    completed: false,
+    priority,
+    dueDate: modalTaskDate.value,
+    category: addTaskCategory ? addTaskCategory.value : 'Work',
+    description: modalTaskDescription.value.trim(),
+    image,
+    createdAt: new Date().toISOString(),
+  })
+
+  saveList()
+  renderTasks()
+  $('#add-task-modal.modal').modal('hide')
+  showNotification('success', 'Task added from modal')
+}
+
+function openInviteModal() {
+  if (!currentUser) {
+    showNotification('error', 'Please login first')
+    return
+  }
+  if (projectLinkInput) {
+    projectLinkInput.value = `${window.location.origin}${window.location.pathname}?workspace=${currentUser.id}`
+  }
+  if (inviteEmailInput) inviteEmailInput.value = ''
+  renderInviteMembers()
+  $('#invite-modal.modal').modal('show')
+}
+
+function sendInvite() {
+  const email = inviteEmailInput.value.trim().toLowerCase()
+  if (!validateEmail(email)) {
+    showNotification('error', 'Enter a valid email')
+    return
+  }
+
+  const exists = inviteMembers.some(member => member.email.toLowerCase() === email)
+  if (exists) {
+    showNotification('error', 'Member already invited')
+    return
+  }
+
+  const baseName = email.split('@')[0].replace(/[._-]/g, ' ')
+  const prettyName = baseName
+    .split(' ')
+    .filter(Boolean)
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+
+  inviteMembers.unshift({
+    id: `m-${Date.now()}-${Math.floor(Math.random() * 100000)}`,
+    name: prettyName || 'New Member',
+    email,
+    permission: 'edit',
+    isOwner: false,
+    avatar: '',
+  })
+
+  saveInviteMembers()
+  renderInviteMembers()
+  inviteEmailInput.value = ''
+  pushNotificationFeed('Invite sent', `Invitation sent to ${email}`, {
+    type: 'info',
+    avatar: '',
+  })
+  showNotification('success', 'Invite sent')
+}
+
+async function copyProjectLink() {
+  const link = projectLinkInput.value
+  if (!link) return
+  try {
+    await navigator.clipboard.writeText(link)
+    pushNotificationFeed('Project link copied', 'Workspace link was copied to your clipboard', {
+      type: 'info',
+    })
+    showNotification('success', 'Project link copied')
+  } catch (_error) {
+    showNotification('error', 'Could not copy link')
   }
 }
 
@@ -587,6 +1270,7 @@ function addTask(event) {
   saveList()
   addTaskInput.value = ''
   addTaskDate.value = ''
+  pushNotificationFeed('Task added', text, { type: 'info' })
   showNotification('success', 'Task was successfully added')
   renderTasks()
 }
@@ -597,12 +1281,21 @@ function completeTask(id) {
 
   task.completed = !task.completed
   saveList()
+  pushNotificationFeed(
+    task.completed ? 'Task completed' : 'Task reopened',
+    task.text,
+    { type: task.completed ? 'info' : 'error' }
+  )
   renderTasks()
 }
 
 function removeTask(id) {
+  const task = list.find(item => item.id === id)
   list = list.filter(item => item.id !== id)
   saveList()
+  if (task) {
+    pushNotificationFeed('Task deleted', task.text, { type: 'error' })
+  }
   showNotification('error', 'Task was successfully deleted')
   renderTasks()
   $('#remove-modal.modal').modal('hide')
@@ -623,6 +1316,7 @@ function editTask(id) {
   task.category = categoryInput.value
 
   saveList()
+  pushNotificationFeed('Task updated', task.text, { type: 'info' })
   showNotification('success', 'Task was successfully updated')
   renderTasks()
   $('#edit-modal.modal').modal('hide')
@@ -636,6 +1330,7 @@ function clearAllTasks() {
 
   list = []
   saveList()
+  pushNotificationFeed('All tasks cleared', 'The active workspace task list was emptied.', { type: 'error' })
   renderTasks()
   $('#clear-all-tasks-modal.modal').modal('hide')
   showNotification('success', 'All tasks were cleared')
@@ -651,6 +1346,9 @@ function clearCompleteTasks() {
   }
 
   saveList()
+  pushNotificationFeed('Completed tasks cleared', 'Finished tasks were removed from the list.', {
+    type: 'info',
+  })
   renderTasks()
   $('#clear-completed-tasks-modal.modal').modal('hide')
   showNotification('success', 'Completed tasks were cleared')
@@ -897,10 +1595,14 @@ function submitAuth() {
 }
 
 function logout() {
+  closeHeaderPopover()
   localStorage.removeItem(CURRENT_USER_KEY)
   sessionStorage.removeItem(SESSION_USER_KEY)
   currentUser = null
   list = []
+  inviteMembers = []
+  notifications = []
+  updateNotificationsBadge()
   renderTasks()
   openAuthModal()
 }
@@ -1112,6 +1814,81 @@ function setupDataTools() {
   }
 }
 
+function setupWorkspaceModals() {
+  if (openAddTaskModalBtn) {
+    openAddTaskModalBtn.addEventListener('click', openAddTaskModal)
+  }
+  if (addTaskModalSubmitBtn) {
+    addTaskModalSubmitBtn.addEventListener('click', submitAddTaskFromModal)
+  }
+  if (modalTaskImage) {
+    modalTaskImage.addEventListener('change', () => {
+      const file = modalTaskImage.files && modalTaskImage.files[0]
+      if (uploadFileName) {
+        uploadFileName.textContent = file ? `Selected: ${file.name}` : 'Drag & drop files here or browse'
+      }
+    })
+  }
+  if (openInviteModalBtn) {
+    openInviteModalBtn.addEventListener('click', openInviteModal)
+  }
+  if (sendInviteBtn) {
+    sendInviteBtn.addEventListener('click', sendInvite)
+  }
+  if (inviteEmailInput) {
+    inviteEmailInput.addEventListener('keydown', event => {
+      if (event.key === 'Enter') {
+        event.preventDefault()
+        sendInvite()
+      }
+    })
+  }
+  if (copyProjectLinkBtn) {
+    copyProjectLinkBtn.addEventListener('click', copyProjectLink)
+  }
+  if (openNotificationsBtn) {
+    openNotificationsBtn.addEventListener('click', openNotificationsPanel)
+  }
+  if (openCalendarBtn) {
+    openCalendarBtn.addEventListener('click', openCalendarPanel)
+  }
+  if (markAllReadBtn) {
+    markAllReadBtn.addEventListener('click', markAllNotificationsRead)
+  }
+  if (calendarPrevBtn) {
+    calendarPrevBtn.addEventListener('click', () => stepCalendarMonth(-1))
+  }
+  if (calendarNextBtn) {
+    calendarNextBtn.addEventListener('click', () => stepCalendarMonth(1))
+  }
+
+  document.addEventListener('click', event => {
+    const target = event.target
+    if (
+      target.closest('#open-notifications-btn') ||
+      target.closest('#open-calendar-btn') ||
+      target.closest('#notifications-modal') ||
+      target.closest('#calendar-modal')
+    ) {
+      return
+    }
+    closeHeaderPopover()
+  })
+
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') {
+      closeHeaderPopover()
+    }
+  })
+
+  window.addEventListener('resize', () => {
+    if (activeHeaderPopover && activeHeaderAnchor) {
+      const width = activeHeaderPopover.id === 'calendar-modal' ? 420 : 390
+      positionHeaderPopover(activeHeaderPopover, activeHeaderAnchor, width)
+    }
+  })
+}
+
 addTaskForm.addEventListener('submit', addTask)
 window.addEventListener('load', () => addTaskInput.focus())
 
@@ -1125,10 +1902,14 @@ setupAuthHandlers()
 setupPasswordToggles()
 setupDetailHandlers()
 setupDataTools()
+setupWorkspaceModals()
 
 if (currentUser) {
   applyCurrentUserUI()
   loadList()
+  loadInviteMembers()
+  loadNotifications()
+  renderInviteMembers()
   switchView('dashboard')
   renderTasks()
 } else {

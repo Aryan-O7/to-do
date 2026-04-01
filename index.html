@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Task Dashboard</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="favicon.ico" type="image/x-icon" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=DM+Sans:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/semantic.min.css"
+      integrity="sha512-8bHTC73gkZ7rZ7vpqUQThUDhqcNFyYi2xgDgPDHc+GXVGHXq+xPjynxIopALmOPqzo9JZj0k6OqqewdGO3EsrQ=="
+      crossorigin="anonymous"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/noty/3.1.4/noty.css"
+      integrity="sha512-NXUhxhkDgZYOMjaIgd89zF2w51Mub53Ru3zCNp5LTlEzMbNNAjTjDbpURYGS5Mop2cU4b7re1nOIucsVlrx9fA=="
+      crossorigin="anonymous"
+    />
+    <link rel="stylesheet" href="main.css" />
+  </head>
+  <body>
+    <div class="page-bg-shape shape-a"></div>
+    <div class="page-bg-shape shape-b"></div>
+
+    <header class="topbar">
+      <button id="menu-toggle" class="menu-toggle" aria-label="Open navigation menu">
+        <i class="bars icon"></i>
+      </button>
+      <div class="brand-wrap">
+        <h1><span>Dash</span>board</h1>
+      </div>
+      <div class="topbar-search">
+        <i class="search icon"></i>
+        <input
+          id="search-input"
+          type="text"
+          placeholder="Search your task here..."
+          aria-label="Search tasks"
+        />
+      </div>
+      <div class="topbar-actions">
+        <button class="ui icon button light-icon-btn" aria-label="Notifications">
+          <i class="bell outline icon"></i>
+        </button>
+        <button class="ui icon button light-icon-btn" aria-label="Calendar">
+          <i class="calendar alternate outline icon"></i>
+        </button>
+        <div class="today-box">
+          <div id="today-day">Tuesday</div>
+          <small id="today-date">20/06/2023</small>
+        </div>
+      </div>
+    </header>
+
+    <div id="overlay" class="overlay"></div>
+
+    <div class="app-shell">
+      <aside id="sidebar" class="sidebar">
+        <div class="profile-card">
+          <img
+            id="profile-avatar"
+            src="https://images.unsplash.com/photo-1527980965255-d3b416303d12?auto=format&fit=crop&w=180&q=80"
+            alt="Profile avatar"
+          />
+          <h2 id="profile-name">Aryan Sharma</h2>
+          <p id="profile-email">aryanwork@email.com</p>
+        </div>
+
+        <nav class="sidebar-nav" aria-label="Sidebar menu">
+          <button class="nav-item active" data-view="dashboard">
+            <i class="th large icon"></i>
+            Dashboard
+          </button>
+          <button class="nav-item" data-view="vital">
+            <i class="exclamation icon"></i>
+            Vital Tasks
+          </button>
+          <button class="nav-item" data-view="mytasks">
+            <i class="check square outline icon"></i>
+            My Tasks
+          </button>
+          <button class="nav-item" data-view="categories">
+            <i class="list icon"></i>
+            Task Categories
+          </button>
+          <button id="open-profile-settings" class="nav-item" data-view="settings">
+            <i class="cog icon"></i>
+            Settings
+          </button>
+          <button class="nav-item" data-view="help">
+            <i class="question circle outline icon"></i>
+            Help
+          </button>
+        </nav>
+
+        <button id="logout-btn" class="logout-btn">
+          <i class="sign-out alternate icon"></i>
+          Logout
+        </button>
+      </aside>
+
+      <main class="workspace">
+        <section id="view-dashboard" class="view-panel active">
+          <section class="welcome-card">
+            <div>
+              <h2 id="welcome-title">Welcome back, Aryan</h2>
+              <p>
+                Keep shipping your tasks. Focus on priority items and complete your sprint.
+              </p>
+            </div>
+            <button class="ui button invite-btn">Invite</button>
+          </section>
+
+          <section class="dashboard-grid">
+            <div class="left-column">
+              <article class="panel panel-main">
+                <div class="panel-header">
+                  <h3>To-Do</h3>
+                  <span id="task-count">0 tasks</span>
+                </div>
+
+                <form id="add-task" class="add-task-form">
+                  <div class="task-form-row">
+                    <input
+                      id="add-task-input"
+                      type="text"
+                      autocomplete="off"
+                      placeholder="Add a new task and press Enter"
+                      aria-label="Add task"
+                      required
+                    />
+                  </div>
+                  <div class="task-form-row task-form-row-3">
+                    <select id="add-task-priority" aria-label="Task priority">
+                      <option value="low">Low</option>
+                      <option value="moderate" selected>Moderate</option>
+                      <option value="high">High</option>
+                    </select>
+                    <input id="add-task-date" type="date" aria-label="Due date" />
+                    <select id="add-task-category" aria-label="Task category">
+                      <option value="Design">Design</option>
+                      <option value="Work" selected>Work</option>
+                      <option value="Personal">Personal</option>
+                      <option value="Health">Health</option>
+                    </select>
+                  </div>
+                  <div class="task-form-row form-actions">
+                    <button class="ui button coral-btn" type="submit">+ Add task</button>
+                  </div>
+                </form>
+
+                <div id="buttons" class="controls-row">
+                  <div class="filter-buttons" role="tablist" aria-label="Filter tasks">
+                    <button class="active" data-filter="all" id="filter-all">All</button>
+                    <button data-filter="active" id="filter-active">Active</button>
+                    <button data-filter="completed" id="filter-completed">Completed</button>
+                  </div>
+                  <div class="actions-right">
+                    <button
+                      id="clear-all-tasks"
+                      class="ui button"
+                      type="button"
+                      onclick="showClearAllTasksModal()"
+                    >
+                      Clear all
+                    </button>
+                    <button
+                      disabled
+                      id="clear-completed-btn"
+                      class="ui button"
+                      type="button"
+                      onclick="showClearCompletedTasksModal()"
+                    >
+                      Clear completed
+                    </button>
+                  </div>
+                </div>
+
+                <ul id="tasks-list" class="tasks-list"></ul>
+              </article>
+            </div>
+
+            <div class="right-column">
+              <article class="panel">
+                <div class="panel-header">
+                  <h3>Task Status</h3>
+                </div>
+                <div class="status-rings">
+                  <div class="ring-wrap">
+                    <div class="progress-ring" id="ring-completed" style="--value: 0"></div>
+                    <p>Completed</p>
+                    <strong id="metric-completed">0%</strong>
+                  </div>
+                  <div class="ring-wrap">
+                    <div class="progress-ring blue" id="ring-progress" style="--value: 0"></div>
+                    <p>In Progress</p>
+                    <strong id="metric-progress">0%</strong>
+                  </div>
+                  <div class="ring-wrap">
+                    <div class="progress-ring gray" id="ring-not-started" style="--value: 0"></div>
+                    <p>Not Started</p>
+                    <strong id="metric-not-started">0%</strong>
+                  </div>
+                </div>
+              </article>
+
+              <article class="panel">
+                <div class="panel-header">
+                  <h3>Completed Tasks</h3>
+                </div>
+                <ul id="completed-list" class="compact-list"></ul>
+              </article>
+
+              <article class="panel">
+                <div class="panel-header">
+                  <h3>Categories</h3>
+                </div>
+                <ul id="category-list" class="compact-list"></ul>
+              </article>
+            </div>
+          </section>
+        </section>
+
+        <section id="view-vital" class="view-panel">
+          <div class="stats-strip">
+            <div class="stat-chip">
+              <span>Vital</span>
+              <strong id="vital-count">0</strong>
+            </div>
+            <div class="stat-chip">
+              <span>Overdue</span>
+              <strong id="overdue-count">0</strong>
+            </div>
+            <div class="stat-chip">
+              <span>Due Today</span>
+              <strong id="today-count">0</strong>
+            </div>
+          </div>
+          <article class="panel">
+            <div class="panel-header">
+              <h3>Vital Tasks</h3>
+              <span>High priority and urgent</span>
+            </div>
+            <ul id="vital-list" class="tasks-list"></ul>
+          </article>
+        </section>
+
+        <section id="view-mytasks" class="view-panel">
+          <div class="stats-strip">
+            <div class="stat-chip">
+              <span>Total</span>
+              <strong id="my-total-count">0</strong>
+            </div>
+            <div class="stat-chip">
+              <span>Open</span>
+              <strong id="my-open-count">0</strong>
+            </div>
+            <div class="stat-chip">
+              <span>Done</span>
+              <strong id="my-done-count">0</strong>
+            </div>
+          </div>
+          <article class="panel">
+            <div class="panel-header">
+              <h3>My Tasks</h3>
+              <span>All your items</span>
+            </div>
+            <p class="view-copy">Drag and drop tasks to reorder your personal list.</p>
+            <ul id="mytasks-list" class="tasks-list"></ul>
+          </article>
+        </section>
+
+        <section id="view-categories" class="view-panel">
+          <article class="panel">
+            <div class="panel-header">
+              <h3>Task Categories</h3>
+              <span>Grouped overview</span>
+            </div>
+            <ul id="category-board-list" class="compact-list"></ul>
+          </article>
+        </section>
+
+        <section id="view-settings" class="view-panel">
+          <article class="panel">
+            <div class="panel-header">
+              <h3>Account Settings</h3>
+              <span>Manage your profile</span>
+            </div>
+            <p class="view-copy">
+              Update your profile details, avatar, and password from settings.
+            </p>
+            <button id="open-profile-settings-inline" class="ui button coral-btn" type="button">
+              Open Profile Settings
+            </button>
+            <div class="export-warning" role="note" aria-live="polite">
+              Exported backups contain account and task data in plain JSON. Share only with trusted people.
+            </div>
+            <div class="settings-tools">
+              <button id="export-data-btn" class="ui button" type="button">Export My Data</button>
+              <button id="import-data-btn" class="ui button" type="button">Import My Data</button>
+              <select id="import-mode" aria-label="Import mode">
+                <option value="replace" selected>Import mode: Replace</option>
+                <option value="append">Import mode: Append</option>
+              </select>
+              <input id="import-data-file" type="file" accept="application/json" hidden />
+            </div>
+          </article>
+        </section>
+
+        <section id="view-help" class="view-panel">
+          <article class="panel">
+            <div class="panel-header">
+              <h3>Help Center</h3>
+              <span>Quick usage guide</span>
+            </div>
+            <ul class="help-list">
+              <li>Add tasks from Dashboard using title, priority, date, and category.</li>
+              <li>Use Vital Tasks to focus on high-priority and upcoming tasks.</li>
+              <li>Use My Tasks to browse every task quickly.</li>
+              <li>Use Categories to see your workload distribution.</li>
+              <li>Use Settings to update your profile and password.</li>
+            </ul>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <div id="edit-modal" class="ui tiny modal">
+      <div class="header">Update Task</div>
+      <div class="content">
+        <input id="task-id" type="hidden" />
+        <div class="ui form">
+          <div class="field">
+            <label for="task-text">Task Name</label>
+            <input id="task-text" type="text" />
+          </div>
+          <div class="three fields">
+            <div class="field">
+              <label for="task-priority">Priority</label>
+              <select id="task-priority">
+                <option value="low">Low</option>
+                <option value="moderate">Moderate</option>
+                <option value="high">High</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="task-date">Due Date</label>
+              <input id="task-date" type="date" />
+            </div>
+            <div class="field">
+              <label for="task-category">Category</label>
+              <select id="task-category">
+                <option value="Design">Design</option>
+                <option value="Work">Work</option>
+                <option value="Personal">Personal</option>
+                <option value="Health">Health</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="actions">
+        <div class="ui cancel button">Cancel</div>
+        <div id="update-button" class="ui positive right labeled icon button">
+          Update
+          <i class="checkmark icon"></i>
+        </div>
+      </div>
+    </div>
+
+    <div id="remove-modal" class="ui tiny modal">
+      <div class="header">Delete Task</div>
+      <div class="content">
+        <p>Are you sure you want to delete this task?</p>
+      </div>
+      <div class="actions">
+        <div class="ui cancel red button">No</div>
+        <div id="remove-task-button" class="ui positive right labeled icon button">
+          Yes
+          <i class="checkmark icon"></i>
+        </div>
+      </div>
+    </div>
+
+    <div id="task-detail-modal" class="ui tiny modal">
+      <div class="header">Task Details</div>
+      <div class="content">
+        <div class="task-detail-grid">
+          <p><strong>Title:</strong> <span id="detail-title">-</span></p>
+          <p><strong>Status:</strong> <span id="detail-status">-</span></p>
+          <p><strong>Priority:</strong> <span id="detail-priority">-</span></p>
+          <p><strong>Category:</strong> <span id="detail-category">-</span></p>
+          <p><strong>Due Date:</strong> <span id="detail-date">-</span></p>
+          <p><strong>Created:</strong> <span id="detail-created">-</span></p>
+        </div>
+      </div>
+      <div class="actions">
+        <div class="ui cancel button">Close</div>
+        <button id="detail-edit-btn" class="ui positive right labeled icon button" type="button">
+          Edit Task
+          <i class="edit icon"></i>
+        </button>
+      </div>
+    </div>
+
+    <div id="clear-all-tasks-modal" class="ui tiny modal">
+      <div class="header">Clear All Tasks</div>
+      <div class="content">
+        <p>Are you sure you want to clear all tasks?</p>
+      </div>
+      <div class="actions">
+        <div class="ui cancel red button">No</div>
+        <div
+          id="clear-all-confirm-button"
+          onclick="clearAllTasks()"
+          class="ui positive right labeled icon button"
+        >
+          Yes
+          <i class="checkmark icon"></i>
+        </div>
+      </div>
+    </div>
+
+    <div id="clear-completed-tasks-modal" class="ui tiny modal">
+      <div class="header">Clear Completed Tasks</div>
+      <div class="content">
+        <p>Are you sure you want to clear all completed tasks?</p>
+      </div>
+      <div class="actions">
+        <div class="ui cancel red button">No</div>
+        <div
+          id="clear-completed-confirm-button"
+          onclick="clearCompleteTasks()"
+          class="ui positive right labeled icon button"
+        >
+          Yes
+          <i class="checkmark icon"></i>
+        </div>
+      </div>
+    </div>
+
+    <div id="auth-modal" class="ui tiny modal">
+      <div class="header" id="auth-modal-title">Create Account</div>
+      <div class="content">
+        <div class="ui form">
+          <div class="field">
+            <label for="auth-name">Full Name</label>
+            <input id="auth-name" type="text" placeholder="Enter your full name" />
+          </div>
+          <div class="field">
+            <label for="auth-email">Email</label>
+            <input id="auth-email" type="email" placeholder="Enter your email" />
+          </div>
+          <div class="field">
+            <label for="auth-password">Password</label>
+            <div class="password-field">
+              <input id="auth-password" type="password" placeholder="Enter your password" />
+              <button
+                class="toggle-password"
+                type="button"
+                data-target="auth-password"
+                aria-label="Toggle password visibility"
+              >
+                <i class="eye slash outline icon"></i>
+              </button>
+            </div>
+          </div>
+          <div class="field" id="auth-confirm-field">
+            <label for="auth-confirm-password">Confirm Password</label>
+            <div class="password-field">
+              <input
+                id="auth-confirm-password"
+                type="password"
+                placeholder="Confirm your password"
+              />
+              <button
+                class="toggle-password"
+                type="button"
+                data-target="auth-confirm-password"
+                aria-label="Toggle confirm password visibility"
+              >
+                <i class="eye slash outline icon"></i>
+              </button>
+            </div>
+          </div>
+          <div class="field" id="auth-avatar-field">
+            <label for="auth-avatar">Avatar URL (optional)</label>
+            <input
+              id="auth-avatar"
+              type="url"
+              placeholder="https://example.com/avatar.jpg"
+            />
+          </div>
+          <p class="auth-helper">
+            This demo uses browser localStorage. Do not use real passwords.
+          </p>
+          <div class="auth-login-row" id="auth-login-row">
+            <div class="ui checkbox remember-wrap">
+              <input id="auth-remember-me" type="checkbox" checked />
+              <label for="auth-remember-me">Remember me</label>
+            </div>
+            <button id="forgot-password-btn" class="forgot-password-btn" type="button">
+              Forgot password?
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="actions">
+        <button id="auth-toggle-mode" class="ui button" type="button">Already have an account? Login</button>
+        <button id="auth-submit" class="ui positive right labeled icon button" type="button">
+          Create Account
+          <i class="checkmark icon"></i>
+        </button>
+      </div>
+    </div>
+
+    <div id="forgot-password-modal" class="ui tiny modal">
+      <div class="header">Reset Password</div>
+      <div class="content">
+        <div class="ui form">
+          <div class="field">
+            <label for="forgot-email">Account Email</label>
+            <input id="forgot-email" type="email" placeholder="Enter your account email" />
+          </div>
+          <div class="field">
+            <label for="forgot-new-password">New Password</label>
+            <div class="password-field">
+              <input
+                id="forgot-new-password"
+                type="password"
+                placeholder="Enter new password"
+              />
+              <button
+                class="toggle-password"
+                type="button"
+                data-target="forgot-new-password"
+                aria-label="Toggle new password visibility"
+              >
+                <i class="eye slash outline icon"></i>
+              </button>
+            </div>
+          </div>
+          <div class="field">
+            <label for="forgot-confirm-password">Confirm New Password</label>
+            <div class="password-field">
+              <input
+                id="forgot-confirm-password"
+                type="password"
+                placeholder="Confirm new password"
+              />
+              <button
+                class="toggle-password"
+                type="button"
+                data-target="forgot-confirm-password"
+                aria-label="Toggle confirm password visibility"
+              >
+                <i class="eye slash outline icon"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="actions">
+        <button id="forgot-back-btn" class="ui button" type="button">Back to Login</button>
+        <button id="forgot-submit-btn" class="ui positive right labeled icon button" type="button">
+          Reset Password
+          <i class="checkmark icon"></i>
+        </button>
+      </div>
+    </div>
+
+    <div id="profile-modal" class="ui tiny modal">
+      <div class="header">Update Profile</div>
+      <div class="content">
+        <div class="ui form">
+          <div class="field">
+            <label for="profile-name-input">Full Name</label>
+            <input id="profile-name-input" type="text" />
+          </div>
+          <div class="field">
+            <label for="profile-email-input">Email</label>
+            <input id="profile-email-input" type="email" />
+          </div>
+          <div class="field">
+            <label for="profile-avatar-input">Avatar URL</label>
+            <input id="profile-avatar-input" type="url" placeholder="https://example.com/avatar.jpg" />
+          </div>
+          <div class="field">
+            <label for="profile-password-input">New Password (optional)</label>
+            <div class="password-field">
+              <input
+                id="profile-password-input"
+                type="password"
+                placeholder="Leave blank to keep current"
+              />
+              <button
+                class="toggle-password"
+                type="button"
+                data-target="profile-password-input"
+                aria-label="Toggle profile password visibility"
+              >
+                <i class="eye slash outline icon"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="actions">
+        <div class="ui cancel button">Cancel</div>
+        <button id="profile-save-btn" class="ui positive right labeled icon button" type="button">
+          Save Changes
+          <i class="checkmark icon"></i>
+        </button>
+      </div>
+    </div>
+
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/noty/3.1.4/noty.min.js"
+      integrity="sha512-lOrm9FgT1LKOJRUXF3tp6QaMorJftUjowOWiDcG5GFZ/q7ukof19V0HKx/GWzXCdt9zYju3/KhBNdCLzK8b90Q=="
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"
+      integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg=="
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/semantic.min.js"
+      integrity="sha512-dqw6X88iGgZlTsONxZK9ePmJEFrmHwpuMrsUChjAw1mRUhUITE5QU9pkcSox+ynfLhL15Sv2al5A0LVyDCmtUw=="
+      crossorigin="anonymous"
+    ></script>
+    <script
+      type="text/javascript"
+      src="https://cdn.jsdelivr.net/npm/toastify-js"
+    ></script>
+    <script type="text/javascript" src="main.js"></script>
+  </body>
+</html>

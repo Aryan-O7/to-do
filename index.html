@@ -141,6 +141,11 @@
                   </div>
                 </div>
 
+                <div class="todo-date-line">
+                  <strong id="todo-today-label">20 June</strong>
+                  <span>&bull; Today</span>
+                </div>
+
                 <form id="add-task" class="add-task-form">
                   <div class="task-form-row">
                     <input
@@ -233,7 +238,7 @@
                 <ul id="completed-list" class="compact-list"></ul>
               </article>
 
-              <article class="panel">
+              <article id="dashboard-categories-panel" class="panel">
                 <div class="panel-header">
                   <h3>Categories</h3>
                 </div>
@@ -258,38 +263,119 @@
               <strong id="today-count">0</strong>
             </div>
           </div>
-          <article class="panel">
-            <div class="panel-header">
-              <h3>Vital Tasks</h3>
-              <span>High priority and urgent</span>
-            </div>
-            <ul id="vital-list" class="tasks-list"></ul>
-          </article>
+
+          <section class="vitals-split-grid">
+            <article class="panel vitals-list-panel">
+              <div class="panel-header vitals-title-row">
+                <h3>Vital Tasks</h3>
+              </div>
+              <ul id="vital-list" class="tasks-list"></ul>
+            </article>
+
+            <article class="panel vitals-detail-panel">
+              <div class="vitals-detail-image-wrapper">
+                <img id="vital-detail-image" class="vitals-detail-image" src="" alt="Task image" />
+              </div>
+
+              <div class="vitals-detail-head">
+                <h3 id="vital-detail-title">Select a task</h3>
+                <div class="vitals-detail-meta-row">
+                  <span>Priority: <em id="vital-detail-priority" class="priority-moderate">-</em></span>
+                  <span>Status: <em id="vital-detail-status" class="status-not-started">-</em></span>
+                  <span>Created on: <em id="vital-detail-created">-</em></span>
+                </div>
+              </div>
+
+              <div class="vitals-detail-content">
+                <div id="vital-section-tasktitle" class="detail-section">
+                  <h4 class="section-label">Task Title:</h4>
+                  <p id="vital-detail-tasktitle" class="section-text">-</p>
+                </div>
+
+                <div id="vital-section-description" class="detail-section">
+                  <h4 class="section-label">Task Description:</h4>
+                  <p id="vital-detail-description" class="section-text">-</p>
+                </div>
+              </div>
+
+              <div class="vitals-detail-actions">
+                <button id="vital-complete-btn" type="button" class="ui icon button detail-action-btn complete-btn" aria-label="Mark task as complete" title="Mark as complete">
+                  <i class="check icon"></i>
+                </button>
+                <button id="vital-edit-btn" type="button" class="ui icon button detail-action-btn" aria-label="Edit task">
+                  <i class="edit outline icon"></i>
+                </button>
+                <button id="vital-delete-btn" type="button" class="ui icon button detail-action-btn" aria-label="Delete task">
+                  <i class="trash alternate outline icon"></i>
+                </button>
+              </div>
+            </article>
+          </section>
         </section>
 
         <section id="view-mytasks" class="view-panel">
-          <div class="stats-strip">
-            <div class="stat-chip">
-              <span>Total</span>
-              <strong id="my-total-count">0</strong>
-            </div>
-            <div class="stat-chip">
-              <span>Open</span>
-              <strong id="my-open-count">0</strong>
-            </div>
-            <div class="stat-chip">
-              <span>Done</span>
-              <strong id="my-done-count">0</strong>
-            </div>
-          </div>
-          <article class="panel">
-            <div class="panel-header">
-              <h3>My Tasks</h3>
-              <span>All your items</span>
-            </div>
-            <p class="view-copy">Drag and drop tasks to reorder your personal list.</p>
-            <ul id="mytasks-list" class="tasks-list"></ul>
-          </article>
+          <section class="mytasks-split-grid">
+            <article class="panel mytasks-list-panel">
+              <div class="panel-header mytasks-title-row">
+                <h3>My Tasks</h3>
+              </div>
+              <ul id="mytasks-list" class="tasks-list"></ul>
+            </article>
+
+            <article class="panel mytasks-detail-panel">
+              <div class="mytasks-detail-image-wrapper">
+                <img id="mytask-detail-image" class="mytasks-detail-image" src="" alt="Task image" />
+              </div>
+
+              <div class="mytasks-detail-head">
+                <h3 id="mytask-detail-title">Select a task</h3>
+                <div class="mytasks-detail-meta-row">
+                  <span>Priority: <em id="mytask-detail-priority" class="priority-moderate">-</em></span>
+                  <span>Status: <em id="mytask-detail-status" class="status-not-started">-</em></span>
+                  <span>Created on: <em id="mytask-detail-created">-</em></span>
+                </div>
+              </div>
+
+              <div class="mytasks-detail-content">
+                <div id="mytask-section-tasktitle" class="detail-section">
+                  <h4 class="section-label">Task Title:</h4>
+                  <p id="mytask-detail-tasktitle" class="section-text">-</p>
+                </div>
+
+                <div id="mytask-section-objective" class="detail-section">
+                  <h4 class="section-label">Objective:</h4>
+                  <p id="mytask-detail-objective" class="section-text">-</p>
+                </div>
+
+                <div id="mytask-section-description" class="detail-section">
+                  <h4 class="section-label">Task Description:</h4>
+                  <p id="mytask-detail-description" class="section-text">-</p>
+                </div>
+
+                <div id="mytask-section-notes" class="detail-section">
+                  <h4 class="section-label">Additional Notes:</h4>
+                  <div id="mytask-detail-notes" class="section-text notes-list">-</div>
+                </div>
+
+                <div id="mytask-section-deadline" class="detail-section">
+                  <h4 class="section-label">Deadline for Submission:</h4>
+                  <p id="mytask-detail-deadline" class="section-text deadline">-</p>
+                </div>
+              </div>
+
+              <div class="mytasks-detail-actions">
+                <button id="mytask-complete-btn" type="button" class="ui icon button detail-action-btn complete-btn" aria-label="Mark task as complete" title="Mark as complete">
+                  <i class="check icon"></i>
+                </button>
+                <button id="mytask-edit-btn" type="button" class="ui icon button detail-action-btn" aria-label="Edit task">
+                  <i class="edit outline icon"></i>
+                </button>
+                <button id="mytask-delete-btn" type="button" class="ui icon button detail-action-btn" aria-label="Delete task">
+                  <i class="trash alternate outline icon"></i>
+                </button>
+              </div>
+            </article>
+          </section>
         </section>
 
         <section id="view-categories" class="view-panel">
@@ -342,6 +428,45 @@
               <li>Use Categories to see your workload distribution.</li>
               <li>Use Settings to update your profile and password.</li>
             </ul>
+          </article>
+        </section>
+
+        <section id="view-taskdetail" class="view-panel">
+          <article class="task-detail-page">
+            <div class="task-detail-shell">
+              <div class="task-detail-top">
+                <img id="detail-image" class="detail-image" src="" alt="Task preview" />
+                <div class="task-detail-head-copy">
+                  <div class="task-detail-head-row">
+                    <h2 id="detail-title">-</h2>
+                    <button id="detail-page-back-btn" class="go-back-btn" type="button">Go Back</button>
+                  </div>
+                  <div class="task-detail-meta-row">
+                    <span>Priority: <em id="detail-priority" class="priority-moderate">Moderate</em></span>
+                    <span>Status: <em id="detail-status" class="status-not-started">Not Started</em></span>
+                    <span>Created on: <em id="detail-created">-</em></span>
+                  </div>
+                  <p class="task-detail-mini-copy" id="detail-mini-copy">-</p>
+                </div>
+              </div>
+
+              <div id="detail-description" class="task-detail-description"></div>
+
+              <div class="task-detail-actions">
+                <button id="detail-complete-btn" type="button" class="ui icon button detail-action-btn complete-btn" aria-label="Mark task as complete" title="Mark as complete">
+                  <i class="check icon"></i>
+                </button>
+                <button id="detail-edit-btn" type="button" class="ui icon button detail-action-btn" aria-label="Edit task">
+                  <i class="edit outline icon"></i>
+                </button>
+                <button id="detail-remove-btn" type="button" class="ui icon button detail-action-btn" aria-label="Delete task">
+                  <i class="trash alternate outline icon"></i>
+                </button>
+                <button id="detail-alert-btn" type="button" class="ui icon button detail-action-btn" aria-label="Set high priority">
+                  <i class="exclamation icon"></i>
+                </button>
+              </div>
+            </div>
           </article>
         </section>
       </main>
@@ -404,27 +529,6 @@
       </div>
     </div>
 
-    <div id="task-detail-modal" class="ui tiny modal">
-      <div class="header">Task Details</div>
-      <div class="content">
-        <div class="task-detail-grid">
-          <p><strong>Title:</strong> <span id="detail-title">-</span></p>
-          <p><strong>Status:</strong> <span id="detail-status">-</span></p>
-          <p><strong>Priority:</strong> <span id="detail-priority">-</span></p>
-          <p><strong>Category:</strong> <span id="detail-category">-</span></p>
-          <p><strong>Due Date:</strong> <span id="detail-date">-</span></p>
-          <p><strong>Created:</strong> <span id="detail-created">-</span></p>
-        </div>
-      </div>
-      <div class="actions">
-        <div class="ui cancel button">Close</div>
-        <button id="detail-edit-btn" class="ui positive right labeled icon button" type="button">
-          Edit Task
-          <i class="edit icon"></i>
-        </button>
-      </div>
-    </div>
-
     <div id="add-task-modal" class="ui large modal task-compose-modal">
       <div class="header modal-head-row">
         <span>Add New Task</span>
@@ -461,6 +565,24 @@
                 <input id="modal-task-image" type="file" accept="image/*" />
                 <p id="upload-file-name">Drag & drop files here or browse</p>
               </div>
+            </div>
+          </div>
+          <div class="field">
+            <label for="modal-task-objective">Objective</label>
+            <textarea id="modal-task-objective" rows="3" placeholder="What is the main objective of this task?"></textarea>
+          </div>
+          <div class="field">
+            <label for="modal-task-notes">Additional Notes</label>
+            <textarea id="modal-task-notes" rows="4" placeholder="Add any additional notes, tips, or bullet points..."></textarea>
+          </div>
+          <div class="two fields">
+            <div class="field">
+              <label for="modal-task-deadline-date">Deadline Date</label>
+              <input id="modal-task-deadline-date" type="date" />
+            </div>
+            <div class="field">
+              <label for="modal-task-deadline-time">Deadline Time</label>
+              <input id="modal-task-deadline-time" type="time" />
             </div>
           </div>
         </div>

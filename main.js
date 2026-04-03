@@ -7,6 +7,29 @@ const completedList = document.querySelector('#completed-list')
 const categoryList = document.querySelector('#category-list')
 const vitalList = document.querySelector('#vital-list')
 const myTasksList = document.querySelector('#mytasks-list')
+const myTaskDetailTitle = document.querySelector('#mytask-detail-title')
+const myTaskDetailPriority = document.querySelector('#mytask-detail-priority')
+const myTaskDetailStatus = document.querySelector('#mytask-detail-status')
+const myTaskDetailCreated = document.querySelector('#mytask-detail-created')
+const myTaskDetailImage = document.querySelector('#mytask-detail-image')
+const myTaskDetailTasktitle = document.querySelector('#mytask-detail-tasktitle')
+const myTaskDetailObjective = document.querySelector('#mytask-detail-objective')
+const myTaskDetailDescription = document.querySelector('#mytask-detail-description')
+const myTaskDetailNotes = document.querySelector('#mytask-detail-notes')
+const myTaskDetailDeadline = document.querySelector('#mytask-detail-deadline')
+const myTaskDeleteBtn = document.querySelector('#mytask-delete-btn')
+const myTaskEditBtn = document.querySelector('#mytask-edit-btn')
+const myTaskCompleteBtn = document.querySelector('#mytask-complete-btn')
+const vitalDetailTitle = document.querySelector('#vital-detail-title')
+const vitalDetailPriority = document.querySelector('#vital-detail-priority')
+const vitalDetailStatus = document.querySelector('#vital-detail-status')
+const vitalDetailCreated = document.querySelector('#vital-detail-created')
+const vitalDetailImage = document.querySelector('#vital-detail-image')
+const vitalDetailTasktitle = document.querySelector('#vital-detail-tasktitle')
+const vitalDetailDescription = document.querySelector('#vital-detail-description')
+const vitalDeleteBtn = document.querySelector('#vital-delete-btn')
+const vitalEditBtn = document.querySelector('#vital-edit-btn')
+const vitalCompleteBtn = document.querySelector('#vital-complete-btn')
 const categoryBoardList = document.querySelector('#category-board-list')
 const vitalCount = document.querySelector('#vital-count')
 const overdueCount = document.querySelector('#overdue-count')
@@ -29,6 +52,10 @@ const modalTaskTitle = document.querySelector('#modal-task-title')
 const modalTaskDate = document.querySelector('#modal-task-date')
 const modalTaskDescription = document.querySelector('#modal-task-description')
 const modalTaskImage = document.querySelector('#modal-task-image')
+const modalTaskObjective = document.querySelector('#modal-task-objective')
+const modalTaskNotes = document.querySelector('#modal-task-notes')
+const modalTaskDeadlineDate = document.querySelector('#modal-task-deadline-date')
+const modalTaskDeadlineTime = document.querySelector('#modal-task-deadline-time')
 const uploadFileName = document.querySelector('#upload-file-name')
 
 const openInviteModalBtn = document.querySelector('#open-invite-modal')
@@ -88,6 +115,10 @@ const forgotConfirmPassword = document.querySelector('#forgot-confirm-password')
 const forgotBackBtn = document.querySelector('#forgot-back-btn')
 const forgotSubmitBtn = document.querySelector('#forgot-submit-btn')
 const detailEditBtn = document.querySelector('#detail-edit-btn')
+const detailRemoveBtn = document.querySelector('#detail-remove-btn')
+const detailAlertBtn = document.querySelector('#detail-alert-btn')
+const detailCompleteBtn = document.querySelector('#detail-complete-btn')
+const detailPageBackBtn = document.querySelector('#detail-page-back-btn')
 
 const profileNameInput = document.querySelector('#profile-name-input')
 const profileEmailInput = document.querySelector('#profile-email-input')
@@ -108,13 +139,17 @@ const viewPanels = {
   categories: document.querySelector('#view-categories'),
   settings: document.querySelector('#view-settings'),
   help: document.querySelector('#view-help'),
+  taskdetail: document.querySelector('#view-taskdetail'),
 }
 
 let list = []
 let currentFilter = 'all'
 let currentSearch = ''
 let currentView = 'dashboard'
+let lastViewBeforeDetail = 'dashboard'
 let selectedDetailTaskId = null
+let selectedMyTaskId = null
+let selectedVitalTaskId = null
 let users = []
 let currentUser = null
 let authMode = 'signup'
@@ -576,6 +611,9 @@ function normalizeTask(task) {
     description: (task.description || '').toString(),
     image: (task.image || '').toString(),
     createdAt: task.createdAt || new Date().toISOString(),
+    objective: (task.objective || '').toString(),
+    additionalNotes: (task.additionalNotes || '').toString(),
+    deadlineForSubmission: (task.deadlineForSubmission || '').toString(),
   }
 }
 
@@ -730,6 +768,10 @@ function resetAddTaskModalFields() {
   modalTaskDate.value = ''
   modalTaskDescription.value = ''
   modalTaskImage.value = ''
+  if (modalTaskObjective) modalTaskObjective.value = ''
+  if (modalTaskNotes) modalTaskNotes.value = ''
+  if (modalTaskDeadlineDate) modalTaskDeadlineDate.value = ''
+  if (modalTaskDeadlineTime) modalTaskDeadlineTime.value = ''
   if (uploadFileName) uploadFileName.textContent = 'Drag & drop files here or browse'
   const selected = document.querySelector('input[name="modal-priority"][value="moderate"]')
   if (selected) selected.checked = true
@@ -779,6 +821,11 @@ async function submitAddTaskFromModal() {
     description: modalTaskDescription.value.trim(),
     image,
     createdAt: new Date().toISOString(),
+    objective: modalTaskObjective ? modalTaskObjective.value.trim() : '',
+    additionalNotes: modalTaskNotes ? modalTaskNotes.value.trim() : '',
+    deadlineForSubmission: '',
+    deadlineDate: modalTaskDeadlineDate ? modalTaskDeadlineDate.value.trim() : '',
+    deadlineTime: modalTaskDeadlineTime ? modalTaskDeadlineTime.value.trim() : '',
   })
 
   saveList()
@@ -891,11 +938,82 @@ function prettyDateTime(dateValue) {
   })
 }
 
+function prettyDateNumeric(dateValue) {
+  if (!dateValue) return '--/--/----'
+  const date = new Date(dateValue)
+  if (Number.isNaN(date.getTime())) return '--/--/----'
+  return date.toLocaleDateString(undefined, {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  })
+}
+
+function getRelativeDeadlineDisplay(deadlineDate, deadlineTime) {
+  if (!deadlineDate) return '-'
+  
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  
+  const deadline = new Date(deadlineDate)
+  const timeDiff = deadline.getTime() - today.getTime()
+  const daysUntil = Math.ceil(timeDiff / (1000 * 60 * 60 * 24))
+  
+  let relativeText = ''
+  
+  if (daysUntil === 0) {
+    relativeText = 'End of Day'
+  } else if (daysUntil === 1) {
+    relativeText = '1 day to go'
+  } else if (daysUntil > 1) {
+    relativeText = `${daysUntil} days to go`
+  } else if (daysUntil === -1) {
+    relativeText = 'Due yesterday'
+  } else if (daysUntil < 0) {
+    relativeText = `${Math.abs(daysUntil)} days overdue`
+  }
+  
+  // Format the full deadline string with date and time
+  const dayStr = deadline.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
+  const timeStr = deadlineTime ? deadlineTime : '23:59'
+  
+  return `${relativeText}, ${dayStr} ${timeStr}`
+}
+
+function taskStatusLabel(task) {
+  if (task.completed) return 'Completed'
+  if (task.dueDate) return 'In Progress'
+  return 'Not Started'
+}
+
+function taskStatusClass(task) {
+  if (task.completed) return 'completed'
+  if (task.dueDate) return 'progress'
+  return 'not-started'
+}
+
+function fallbackTaskImage(task) {
+  if (task.category.toLowerCase() === 'work') {
+    return 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=240&q=80'
+  }
+  if (task.category.toLowerCase() === 'design') {
+    return 'https://images.unsplash.com/photo-1515879218367-8466d910aaa4?auto=format&fit=crop&w=240&q=80'
+  }
+  return 'https://images.unsplash.com/photo-1483058712412-4245e9b90334?auto=format&fit=crop&w=240&q=80'
+}
+
 function updateToday() {
   const now = new Date()
   const dayEl = document.querySelector('#today-day')
   const dateEl = document.querySelector('#today-date')
+  const todoDateLabel = document.querySelector('#todo-today-label')
   if (dayEl) dayEl.textContent = now.toLocaleDateString(undefined, { weekday: 'long' })
+  if (todoDateLabel) {
+    todoDateLabel.textContent = now.toLocaleDateString(undefined, {
+      day: 'numeric',
+      month: 'long',
+    })
+  }
   if (dateEl) {
     dateEl.textContent = now.toLocaleDateString(undefined, {
       day: '2-digit',
@@ -939,6 +1057,10 @@ function updateMetrics() {
   ringProgress.style.setProperty('--value', inProgressPct)
   ringNotStarted.style.setProperty('--value', notStartedPct)
 
+  ringCompleted.dataset.value = `${completedPct}%`
+  ringProgress.dataset.value = `${inProgressPct}%`
+  ringNotStarted.dataset.value = `${notStartedPct}%`
+
   metricCompleted.textContent = `${completedPct}%`
   metricProgress.textContent = `${inProgressPct}%`
   metricNotStarted.textContent = `${notStartedPct}%`
@@ -954,10 +1076,29 @@ function renderCompletedList() {
   }
 
   completed.forEach(task => {
+    const imageUrl = task.image || fallbackTaskImage(task)
+    const description = task.description?.trim() || 'Task completed successfully.'
     completedList.insertAdjacentHTML(
       'beforeend',
-      `<li>${escapeHtml(task.text)} <span>${escapeHtml(task.category)}</span></li>`
+      `<li class="dash-completed-card clickable-row" data-id="${task.id}">
+        <div class="dash-task-top">
+          <span class="dash-status-dot completed"></span>
+          <h4>${escapeHtml(task.text)}</h4>
+        </div>
+        <div class="dash-task-body">
+          <p>${escapeHtml(description)}</p>
+          <img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(task.text)}" />
+        </div>
+        <div class="dash-task-footer">
+          <span>Status: <em class="status-completed">Completed</em></span>
+          <span>Completed ${escapeHtml(prettyDateNumeric(task.createdAt))}</span>
+        </div>
+      </li>`
     )
+  })
+
+  completedList.querySelectorAll('.dash-completed-card').forEach(item => {
+    item.addEventListener('click', () => openTaskDetailModal(+item.dataset.id))
   })
 }
 
@@ -985,6 +1126,8 @@ function renderCategoryList() {
 
 function renderVitalList() {
   if (!vitalList) return
+  vitalList.innerHTML = ''
+
   const now = new Date()
   const todayIso = new Date().toISOString().slice(0, 10)
   const urgent = list
@@ -999,16 +1142,33 @@ function renderVitalList() {
     })
     .reverse()
 
-  vitalList.innerHTML = ''
   if (urgent.length === 0) {
     vitalList.innerHTML = '<li class="empty-box">No urgent tasks right now.</li>'
+    selectedVitalTaskId = null
+    renderVitalTaskDetailPanel(null)
+    
+    const overdue = list.filter(task => {
+      if (task.completed || !task.dueDate) return false
+      return task.dueDate < todayIso
+    }).length
+    const dueToday = list.filter(task => !task.completed && task.dueDate === todayIso).length
+
+    if (vitalCount) vitalCount.textContent = String(0)
+    if (overdueCount) overdueCount.textContent = String(overdue)
+    if (todayCount) todayCount.textContent = String(dueToday)
     return
   }
 
+  const exists = urgent.some(task => task.id === selectedVitalTaskId)
+  if (!exists) {
+    selectedVitalTaskId = urgent[0].id
+  }
+
   urgent.forEach(task => {
+    const isSelected = task.id === selectedVitalTaskId
     vitalList.insertAdjacentHTML(
       'beforeend',
-      `<li class="task-item clickable-row" data-id="${task.id}">
+      `<li class="task-item ${isSelected ? 'selected' : ''}" data-id="${task.id}">
         <div class="task-meta">
           <h4>${escapeHtml(task.text)}</h4>
           <div class="task-tags">
@@ -1022,8 +1182,19 @@ function renderVitalList() {
   })
 
   vitalList.querySelectorAll('.task-item').forEach(item => {
-    item.addEventListener('click', () => openTaskDetailModal(+item.dataset.id))
+    item.addEventListener('click', () => {
+      selectedVitalTaskId = +item.dataset.id
+      const task = list.find(t => t.id === selectedVitalTaskId)
+      renderVitalList()
+      if (task) renderVitalTaskDetailPanel(task)
+    })
   })
+
+  // Render the detail panel for the selected task
+  const selectedTask = list.find(t => t.id === selectedVitalTaskId)
+  if (selectedTask) {
+    renderVitalTaskDetailPanel(selectedTask)
+  }
 
   const overdue = list.filter(task => {
     if (task.completed || !task.dueDate) return false
@@ -1042,16 +1213,20 @@ function renderMyTasksList() {
 
   if (list.length === 0) {
     myTasksList.innerHTML = '<li class="empty-box">No tasks created yet.</li>'
+    selectedMyTaskId = null
+    renderMyTaskDetailPanel(null)
     return
+  }
+
+  const exists = list.some(task => task.id === selectedMyTaskId)
+  if (!exists) {
+    selectedMyTaskId = list[0].id
   }
 
   list.forEach(task => {
     myTasksList.insertAdjacentHTML(
       'beforeend',
-      `<li class="task-item clickable-row" data-id="${task.id}">
-        <button class="drag-handle" data-id="${task.id}" draggable="true" aria-label="Drag to reorder">
-          <i class="bars icon"></i>
-        </button>
+      `<li class="task-item clickable-row ${task.id === selectedMyTaskId ? 'selected' : ''}" data-id="${task.id}">
         <div class="task-meta">
           <h4 class="${task.completed ? 'completed' : ''}">${escapeHtml(task.text)}</h4>
           <div class="task-tags">
@@ -1065,57 +1240,14 @@ function renderMyTasksList() {
   })
 
   myTasksList.querySelectorAll('.task-item').forEach(item => {
-    item.addEventListener('click', event => {
-      if (event.target.closest('.drag-handle')) return
-      openTaskDetailModal(+item.dataset.id)
+    item.addEventListener('click', () => {
+      selectedMyTaskId = +item.dataset.id
+      renderMyTasksList()
     })
   })
 
-  myTasksList.querySelectorAll('.drag-handle[draggable=true]').forEach(item => {
-    item.addEventListener('dragstart', event => {
-      draggedTaskId = +item.dataset.id
-      item.closest('.task-item')?.classList.add('dragging')
-      if (event.dataTransfer) {
-        event.dataTransfer.effectAllowed = 'move'
-      }
-    })
-
-    item.addEventListener('dragend', () => {
-      item.closest('.task-item')?.classList.remove('dragging')
-      myTasksList.querySelectorAll('.task-item').forEach(node => node.classList.remove('drop-target'))
-    })
-    item.addEventListener('click', event => event.stopPropagation())
-  })
-
-  myTasksList.querySelectorAll('.task-item').forEach(item => {
-    item.addEventListener('dragover', event => {
-      event.preventDefault()
-      if (+item.dataset.id !== draggedTaskId) {
-        item.classList.add('drop-target')
-      }
-    })
-
-    item.addEventListener('dragleave', () => {
-      item.classList.remove('drop-target')
-    })
-
-    item.addEventListener('drop', event => {
-      event.preventDefault()
-      item.classList.remove('drop-target')
-      const targetId = +item.dataset.id
-      if (!draggedTaskId || draggedTaskId === targetId) return
-
-      const sourceIndex = list.findIndex(task => task.id === draggedTaskId)
-      const targetIndex = list.findIndex(task => task.id === targetId)
-      if (sourceIndex === -1 || targetIndex === -1) return
-
-      const [moved] = list.splice(sourceIndex, 1)
-      list.splice(targetIndex, 0, moved)
-      saveList()
-      renderTasks()
-      showNotification('success', 'Task order updated')
-    })
-  })
+  const selectedTask = list.find(task => task.id === selectedMyTaskId) || null
+  renderMyTaskDetailPanel(selectedTask)
 
   const total = list.length
   const done = list.filter(task => task.completed).length
@@ -1123,6 +1255,175 @@ function renderMyTasksList() {
   if (myTotalCount) myTotalCount.textContent = String(total)
   if (myOpenCount) myOpenCount.textContent = String(open)
   if (myDoneCount) myDoneCount.textContent = String(done)
+}
+
+function renderMyTaskDetailPanel(task) {
+  if (!myTaskDetailTitle || !myTaskDetailDescription) return
+
+  if (!task) {
+    myTaskDetailTitle.textContent = 'Select a task'
+    myTaskDetailPriority.textContent = '-'
+    myTaskDetailPriority.className = 'priority-moderate'
+    myTaskDetailStatus.textContent = '-'
+    myTaskDetailStatus.className = 'status-not-started'
+    myTaskDetailCreated.textContent = '-'
+    myTaskDetailImage.src = ''
+    myTaskDetailImage.style.display = 'none'
+    myTaskDetailTasktitle.textContent = 'Click a task card on the left to preview details here.'
+    myTaskDetailObjective.textContent = '-'
+    myTaskDetailDescription.textContent = '-'
+    myTaskDetailNotes.innerHTML = '-'
+    myTaskDetailDeadline.textContent = '-'
+    if (myTaskDeleteBtn) myTaskDeleteBtn.disabled = true
+    if (myTaskEditBtn) myTaskEditBtn.disabled = true
+    if (myTaskCompleteBtn) {
+      myTaskCompleteBtn.disabled = true
+      myTaskCompleteBtn.classList.remove('is-completed')
+    }
+    return
+  }
+
+  const statusClass = taskStatusClass(task)
+  myTaskDetailTitle.textContent = task.text
+  myTaskDetailPriority.textContent = task.priority
+  myTaskDetailPriority.className = `priority-${task.priority}`
+  myTaskDetailStatus.textContent = taskStatusLabel(task)
+  myTaskDetailStatus.className = `status-${statusClass}`
+  myTaskDetailCreated.textContent = prettyDateNumeric(task.createdAt)
+
+  // Task Image section
+  if (task.image && task.image.length > 0) {
+    myTaskDetailImage.src = task.image
+    myTaskDetailImage.style.display = 'block'
+  } else {
+    myTaskDetailImage.src = ''
+    myTaskDetailImage.style.display = 'none'
+  }
+
+  // Task Title section
+  myTaskDetailTasktitle.textContent = task.text || '-'
+
+  // Objective section
+  const objective = (task.objective || '').trim()
+  myTaskDetailObjective.textContent = objective.length > 0 ? objective : '-'
+
+  // Description section
+  const description = (task.description || '').trim()
+  myTaskDetailDescription.textContent = description.length > 0 ? description : '-'
+
+  // Additional Notes section
+  const notes = (task.additionalNotes || '').trim()
+  if (notes.length > 0) {
+    // Check if notes contain bullet points
+    if (notes.includes('\n') || notes.includes('•')) {
+      const noteLines = notes.split('\n').filter(line => line.trim().length > 0)
+      const notesList = noteLines.map(line => {
+        const text = line.replace(/^[•\-\*]\s*/,'').trim()
+        return `<li>${escapeHtml(text)}</li>`
+      }).join('')
+      myTaskDetailNotes.innerHTML = notesList.length > 0 ? `<ul>${notesList}</ul>` : '-'
+    } else {
+      myTaskDetailNotes.innerHTML = escapeHtml(notes)
+    }
+  } else {
+    myTaskDetailNotes.innerHTML = '-'
+  }
+
+  // Deadline section - use new relative deadline display
+  const deadlineDate = (task.deadlineDate || '').trim()
+  const deadlineTime = (task.deadlineTime || '').trim()
+  
+  if (deadlineDate) {
+    myTaskDetailDeadline.textContent = getRelativeDeadlineDisplay(deadlineDate, deadlineTime)
+  } else {
+    myTaskDetailDeadline.textContent = '-'
+  }
+
+  if (myTaskDeleteBtn) myTaskDeleteBtn.disabled = false
+  if (myTaskEditBtn) myTaskEditBtn.disabled = false
+  
+  // Complete button state and styling
+  if (myTaskCompleteBtn) {
+    myTaskCompleteBtn.disabled = false
+    if (task.completed) {
+      myTaskCompleteBtn.classList.add('is-completed')
+      myTaskCompleteBtn.setAttribute('aria-label', 'Mark task as incomplete')
+      myTaskCompleteBtn.setAttribute('title', 'Mark as incomplete')
+      myTaskCompleteBtn.querySelector('i').className = 'check circle icon'
+    } else {
+      myTaskCompleteBtn.classList.remove('is-completed')
+      myTaskCompleteBtn.setAttribute('aria-label', 'Mark task as complete')
+      myTaskCompleteBtn.setAttribute('title', 'Mark as complete')
+      myTaskCompleteBtn.querySelector('i').className = 'check icon'
+    }
+  }
+}
+
+function renderVitalTaskDetailPanel(task) {
+  if (!vitalDetailTitle || !vitalDetailDescription) return
+
+  if (!task) {
+    vitalDetailTitle.textContent = 'Select a task'
+    vitalDetailPriority.textContent = '-'
+    vitalDetailPriority.className = 'priority-moderate'
+    vitalDetailStatus.textContent = '-'
+    vitalDetailStatus.className = 'status-not-started'
+    vitalDetailCreated.textContent = '-'
+    vitalDetailImage.src = ''
+    vitalDetailImage.style.display = 'none'
+    vitalDetailTasktitle.textContent = 'Click a task card on the left to preview details here.'
+    vitalDetailDescription.textContent = '-'
+    if (vitalDeleteBtn) vitalDeleteBtn.disabled = true
+    if (vitalEditBtn) vitalEditBtn.disabled = true
+    if (vitalCompleteBtn) {
+      vitalCompleteBtn.disabled = true
+      vitalCompleteBtn.classList.remove('is-completed')
+    }
+    return
+  }
+
+  const statusClass = taskStatusClass(task)
+  vitalDetailTitle.textContent = task.text
+  vitalDetailPriority.textContent = task.priority
+  vitalDetailPriority.className = `priority-${task.priority}`
+  vitalDetailStatus.textContent = taskStatusLabel(task)
+  vitalDetailStatus.className = `status-${statusClass}`
+  vitalDetailCreated.textContent = prettyDateNumeric(task.createdAt)
+
+  // Task Image section
+  if (task.image && task.image.length > 0) {
+    vitalDetailImage.src = task.image
+    vitalDetailImage.style.display = 'block'
+  } else {
+    vitalDetailImage.src = ''
+    vitalDetailImage.style.display = 'none'
+  }
+
+  // Task Title section
+  vitalDetailTasktitle.textContent = task.text || '-'
+
+  // Description section
+  const description = (task.description || '').trim()
+  vitalDetailDescription.textContent = description.length > 0 ? description : '-'
+
+  if (vitalDeleteBtn) vitalDeleteBtn.disabled = false
+  if (vitalEditBtn) vitalEditBtn.disabled = false
+  
+  // Complete button state and styling
+  if (vitalCompleteBtn) {
+    vitalCompleteBtn.disabled = false
+    if (task.completed) {
+      vitalCompleteBtn.classList.add('is-completed')
+      vitalCompleteBtn.setAttribute('aria-label', 'Mark task as incomplete')
+      vitalCompleteBtn.setAttribute('title', 'Mark as incomplete')
+      vitalCompleteBtn.querySelector('i').className = 'check circle icon'
+    } else {
+      vitalCompleteBtn.classList.remove('is-completed')
+      vitalCompleteBtn.setAttribute('aria-label', 'Mark task as complete')
+      vitalCompleteBtn.setAttribute('title', 'Mark as complete')
+      vitalCompleteBtn.querySelector('i').className = 'check icon'
+    }
+  }
 }
 
 function renderCategoryBoard() {
@@ -1214,21 +1515,29 @@ function renderTasks() {
       '<li class="empty-box">No tasks match this filter. Add or search a different task.</li>'
   } else {
     ;[...filtered].reverse().forEach(task => {
+      const statusLabel = taskStatusLabel(task)
+      const statusClass = taskStatusClass(task)
+      const imageUrl = task.image || fallbackTaskImage(task)
+      const description =
+        task.description?.trim() ||
+        'Plan this task with details so your team knows exactly what to do next.'
+
       tasksList.insertAdjacentHTML(
         'beforeend',
-        `<li class="task-item" data-id="${task.id}">
-          <input type="checkbox" ${task.completed ? 'checked' : ''} data-id="${task.id}" aria-label="Toggle completion" />
-          <div class="task-meta">
+        `<li class="dash-task-card clickable-row" data-id="${task.id}">
+          <div class="dash-task-top">
+            <span class="dash-status-dot ${statusClass}"></span>
             <h4 class="${task.completed ? 'completed' : ''}">${escapeHtml(task.text)}</h4>
-            <div class="task-tags">
-              <span class="tag priority-${escapeHtml(task.priority)}">${escapeHtml(task.priority)}</span>
-              <span class="tag">${escapeHtml(task.category)}</span>
-              <span class="tag">${escapeHtml(prettyDate(task.dueDate))}</span>
-            </div>
+            <i class="ellipsis horizontal icon"></i>
           </div>
-          <div class="task-actions">
-            <i data-id="${task.id}" title="Edit" class="edit outline icon"></i>
-            <i data-id="${task.id}" title="Delete" class="trash alternate outline icon"></i>
+          <div class="dash-task-body">
+            <p>${escapeHtml(description)}</p>
+            <img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(task.text)}" />
+          </div>
+          <div class="dash-task-footer">
+            <span>Priority: <em class="priority-${escapeHtml(task.priority)}">${escapeHtml(task.priority)}</em></span>
+            <span>Status: <em class="status-${statusClass}">${statusLabel}</em></span>
+            <span>Created on: ${escapeHtml(prettyDateNumeric(task.createdAt))}</span>
           </div>
         </li>`
       )
@@ -1238,7 +1547,21 @@ function renderTasks() {
   clearAllTasksBtn.disabled = list.length === 0
   clearCompletedBtn.disabled = !list.some(task => task.completed)
 
-  attachTaskHandlers()
+  tasksList.querySelectorAll('.dash-task-card').forEach(item => {
+    item.addEventListener('click', () => {
+      // Remove active class from all task cards
+      tasksList.querySelectorAll('.dash-task-card').forEach(card => card.classList.remove('active'))
+      // Add active class to clicked card
+      item.classList.add('active')
+      // Remove active class after animation completes
+      setTimeout(() => {
+        item.classList.remove('active')
+      }, 600)
+      // Open task detail
+      openTaskDetailModal(+item.dataset.id)
+    })
+  })
+
   renderCompletedList()
   renderCategoryList()
   renderVitalList()
@@ -1376,15 +1699,62 @@ function openTaskDetailModal(id) {
   const task = list.find(item => item.id === id)
   if (!task) return
 
+  const statusClass = taskStatusClass(task)
+  const statusLabel = taskStatusLabel(task)
+
   selectedDetailTaskId = task.id
   document.querySelector('#detail-title').textContent = task.text
-  document.querySelector('#detail-status').textContent = task.completed ? 'Completed' : 'Open'
+  const detailStatusEl = document.querySelector('#detail-status')
+  detailStatusEl.textContent = statusLabel
+  detailStatusEl.className = `status-${statusClass}`
   document.querySelector('#detail-priority').textContent = task.priority
-  document.querySelector('#detail-category').textContent = task.category
-  document.querySelector('#detail-date').textContent = prettyDate(task.dueDate)
-  document.querySelector('#detail-created').textContent = prettyDateTime(task.createdAt)
+  document.querySelector('#detail-priority').className = `priority-${task.priority}`
+  document.querySelector('#detail-created').textContent = prettyDateNumeric(task.createdAt)
 
-  $('#task-detail-modal.modal').modal('show')
+  // Update complete button state
+  if (detailCompleteBtn) {
+    if (task.completed) {
+      detailCompleteBtn.classList.add('is-completed')
+      detailCompleteBtn.setAttribute('aria-label', 'Mark task as incomplete')
+      detailCompleteBtn.setAttribute('title', 'Mark as incomplete')
+      detailCompleteBtn.querySelector('i').className = 'check circle icon'
+    } else {
+      detailCompleteBtn.classList.remove('is-completed')
+      detailCompleteBtn.setAttribute('aria-label', 'Mark task as complete')
+      detailCompleteBtn.setAttribute('title', 'Mark as complete')
+      detailCompleteBtn.querySelector('i').className = 'check icon'
+    }
+  }
+
+  const detailImage = document.querySelector('#detail-image')
+  if (detailImage) {
+    detailImage.src = task.image || fallbackTaskImage(task)
+    detailImage.alt = `${task.text} image`
+  }
+
+  const detailMiniCopy = document.querySelector('#detail-mini-copy')
+  if (detailMiniCopy) {
+    detailMiniCopy.textContent = `${task.category} ${task.dueDate ? `• Due: ${prettyDate(task.dueDate)}` : '• No due date'}`
+  }
+
+  const detailDescription = document.querySelector('#detail-description')
+  if (detailDescription) {
+    const cleanDescription = (task.description || '').trim()
+    detailDescription.textContent =
+      cleanDescription.length > 0
+        ? cleanDescription
+        : 'Add a detailed description to this task from Edit Task to show full notes here.'
+  }
+
+  lastViewBeforeDetail = currentView === 'taskdetail' ? 'dashboard' : currentView
+  switchView('taskdetail')
+
+  const detailPage = document.querySelector('.task-detail-page')
+  if (detailPage) {
+    detailPage.classList.remove('animating')
+    void detailPage.offsetWidth
+    detailPage.classList.add('animating')
+  }
 }
 
 function showRemoveModal(id) {
@@ -1714,9 +2084,103 @@ function setupAuthHandlers() {
 function setupDetailHandlers() {
   detailEditBtn.addEventListener('click', () => {
     if (!selectedDetailTaskId) return
-    $('#task-detail-modal.modal').modal('hide')
     showEditModal(selectedDetailTaskId)
   })
+
+  if (detailRemoveBtn) {
+    detailRemoveBtn.addEventListener('click', () => {
+      if (!selectedDetailTaskId) return
+      showRemoveModal(selectedDetailTaskId)
+    })
+  }
+
+  if (detailAlertBtn) {
+    detailAlertBtn.addEventListener('click', () => {
+      if (!selectedDetailTaskId) return
+      const task = list.find(item => item.id === selectedDetailTaskId)
+      if (!task) return
+      task.priority = 'high'
+      saveList()
+      renderTasks()
+      openTaskDetailModal(task.id)
+      showNotification('success', 'Task marked as high priority')
+    })
+  }
+
+  if (detailPageBackBtn) {
+    detailPageBackBtn.addEventListener('click', () => {
+      const targetView = viewPanels[lastViewBeforeDetail] ? lastViewBeforeDetail : 'dashboard'
+      switchView(targetView)
+      document.querySelectorAll('.nav-item').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.view === targetView)
+      })
+    })
+  }
+
+  if (detailCompleteBtn) {
+    detailCompleteBtn.addEventListener('click', () => {
+      if (!selectedDetailTaskId) return
+      const task = list.find(t => t.id === selectedDetailTaskId)
+      if (!task) return
+      task.completed = !task.completed
+      saveList()
+      renderTasks()
+      openTaskDetailModal(task.id)
+      showNotification('success', task.completed ? 'Task marked as complete' : 'Task marked as incomplete')
+    })
+  }
+
+  if (myTaskEditBtn) {
+    myTaskEditBtn.addEventListener('click', () => {
+      if (!selectedMyTaskId) return
+      showEditModal(selectedMyTaskId)
+    })
+  }
+
+  if (myTaskDeleteBtn) {
+    myTaskDeleteBtn.addEventListener('click', () => {
+      if (!selectedMyTaskId) return
+      showRemoveModal(selectedMyTaskId)
+    })
+  }
+
+  if (myTaskCompleteBtn) {
+    myTaskCompleteBtn.addEventListener('click', () => {
+      if (!selectedMyTaskId) return
+      const task = list.find(t => t.id === selectedMyTaskId)
+      if (!task) return
+      task.completed = !task.completed
+      saveList()
+      renderMyTasksList()
+      showNotification('success', task.completed ? 'Task marked as complete' : 'Task marked as incomplete')
+    })
+  }
+
+  if (vitalEditBtn) {
+    vitalEditBtn.addEventListener('click', () => {
+      if (!selectedVitalTaskId) return
+      showEditModal(selectedVitalTaskId)
+    })
+  }
+
+  if (vitalDeleteBtn) {
+    vitalDeleteBtn.addEventListener('click', () => {
+      if (!selectedVitalTaskId) return
+      showRemoveModal(selectedVitalTaskId)
+    })
+  }
+
+  if (vitalCompleteBtn) {
+    vitalCompleteBtn.addEventListener('click', () => {
+      if (!selectedVitalTaskId) return
+      const task = list.find(t => t.id === selectedVitalTaskId)
+      if (!task) return
+      task.completed = !task.completed
+      saveList()
+      renderVitalList()
+      showNotification('success', task.completed ? 'Task marked as complete' : 'Task marked as incomplete')
+    })
+  }
 }
 
 function exportUserData() {
